@@ -1,0 +1,57 @@
+services:
+  eureka:
+    build: ./eureka
+    image: ddouraid/backend-eureka:latest
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-network
+
+  config-server:
+    build: ./config-server
+    image: ddouraid/backend-config-server:latest
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      - eureka
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+    networks:
+      - microservices-network
+
+  gateway:
+    build: ./gateway
+    image: ddouraid/backend-gateway:latest
+    container_name: gateway-service
+    ports:
+      - "8065:8065"
+    depends_on:
+      - eureka
+      - config-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+    networks:
+      - microservices-network
+
+  user-service:
+    build: ./microservices/User
+    image: ddouraid/backend-user-service:latest
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - eureka
+      - gateway
+      - config-server
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
